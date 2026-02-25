@@ -502,6 +502,7 @@
   .lang-tag[data-lang="ru"].active { background: rgba(80,120,255,0.12); border-color: rgba(80,120,255,0.4); color: #8099ff; }
   .lang-tag[data-lang="ko"].active { background: rgba(180,80,255,0.12); border-color: rgba(180,80,255,0.4); color: #cc66ff; }
   .lang-tag[data-lang="hi"].active { background: rgba(255,140,0,0.12); border-color: rgba(255,140,0,0.4); color: #ff9900; }
+  .lang-tag[data-lang="vi"].active { background: rgba(255,30,30,0.12); border-color: rgba(255,30,30,0.4); color: #ff5555; }
 
   .error-msg {
     background: rgba(255,60,60,0.08);
@@ -693,12 +694,13 @@ const LANGUAGES = [
   { code: 'ru', name: 'Russian', flag: '🇷🇺', bcp: 'ru-RU' },
   { code: 'ko', name: 'Korean', flag: '🇰🇷', bcp: 'ko-KR' },
   { code: 'hi', name: 'Hindi', flag: '🇮🇳', bcp: 'hi-IN' },
+  { code: 'vi', name: 'Vietnamese', flag: '🇻🇳', bcp: 'vi-VN' },
 ];
 
 const LANG_NAMES = {
   es: 'Spanish', fr: 'French', de: 'German', zh: 'Mandarin Chinese',
   ja: 'Japanese', ar: 'Arabic', pt: 'Portuguese', ru: 'Russian',
-  ko: 'Korean', hi: 'Hindi'
+  ko: 'Korean', hi: 'Hindi', vi: 'Vietnamese'
 };
 
 let activeLangs = new Set(['es', 'fr', 'de']);
@@ -875,88 +877,50 @@ function escapeHtml(text) {
   return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Translate with Anthropic API
+// Translate using free MyMemory API (no key needed, works from any browser/device)
 async function translateText(text) {
   if (!text.trim() || activeLangs.size === 0) return;
 
   const langsToTranslate = [...activeLangs];
+  const sourceLang = document.getElementById('sourceLang').value.split('-')[0];
 
-  // Show thinking state
+  // Show thinking state on all cards simultaneously
   langsToTranslate.forEach(code => {
     const body = document.getElementById('body-' + code);
     const status = document.getElementById('status-' + code);
     const card = document.getElementById('card-' + code);
     if (body) body.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-    if (status) { status.className = 'card-status thinking'; }
+    if (status) status.className = 'card-status thinking';
     if (card) card.classList.add('updating');
   });
 
-  // Build single prompt asking for all translations
-  const langList = langsToTranslate.map(code => LANG_NAMES[code]).join(', ');
-  const prompt = `Translate the following text into these languages: ${langList}.
-
-Text: "${text}"
-
-Respond ONLY with a JSON object where keys are language codes (${langsToTranslate.join(', ')}) and values are the translations. Example format:
-{"es":"...", "fr":"...", "de":"..."}
-
-Return nothing else - just the raw JSON object.`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const content = data.content?.[0]?.text || '{}';
-
-    let translations = {};
+  // Fire all translations in parallel
+  const requests = langsToTranslate.map(async (code) => {
+    const targetCode = code === 'zh' ? 'zh-CN' : code;
+    const langpair = sourceLang + '|' + targetCode;
+    const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + encodeURIComponent(langpair);
     try {
-      const clean = content.replace(/```json|```/g, '').trim();
-      translations = JSON.parse(clean);
-    } catch(e) {
-      // Try to extract JSON from the response
-      const match = content.match(/\{[\s\S]*\}/);
-      if (match) translations = JSON.parse(match[0]);
+      const res = await fetch(url);
+      const data = await res.json();
+      return { code, text: data.responseStatus === 200 ? data.responseData.translatedText : null };
+    } catch {
+      return { code, text: null };
     }
+  });
 
-    langsToTranslate.forEach(code => {
-      const body = document.getElementById('body-' + code);
-      const status = document.getElementById('status-' + code);
-      const card = document.getElementById('card-' + code);
-      const speakBtn = document.getElementById('speakBtn-' + code);
-      if (body) {
-        body.innerHTML = translations[code]
-          ? escapeHtml(translations[code])
-          : '<span class="empty">Translation unavailable</span>';
-      }
-      if (status) { status.className = 'card-status done'; }
-      if (card) card.classList.remove('updating');
-      if (speakBtn && translations[code]) {
-        speakBtn.disabled = false;
-      }
-      // Auto-speak
-      if (translations[code] && autoSpeak.has(code)) {
-        speakText(translations[code], code);
-      }
-    });
+  const results = await Promise.all(requests);
 
-  } catch (err) {
-    langsToTranslate.forEach(code => {
-      const body = document.getElementById('body-' + code);
-      const status = document.getElementById('status-' + code);
-      const card = document.getElementById('card-' + code);
-      if (body) body.innerHTML = '<span class="empty">Error translating</span>';
-      if (status) { status.className = 'card-status'; }
-      if (card) card.classList.remove('updating');
-    });
-  }
+  results.forEach(({ code, text: translated }) => {
+    const body = document.getElementById('body-' + code);
+    const status = document.getElementById('status-' + code);
+    const card = document.getElementById('card-' + code);
+    const speakBtn = document.getElementById('speakBtn-' + code);
+    if (body) body.innerHTML = translated ? escapeHtml(translated) : '<span class="empty">Translation unavailable</span>';
+    if (status) status.className = 'card-status done';
+    if (card) card.classList.remove('updating');
+    if (speakBtn && translated) speakBtn.disabled = false;
+    if (translated && autoSpeak.has(code)) speakText(translated, code);
+  });
 }
 
 // ── TTS ──────────────────────────────────────────────
