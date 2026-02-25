@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyglot Live — Audience</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1220;
+    --surface2: #131929;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00d4ff;
+    --accent2: #7b61ff;
+    --text: #e8edf7;
+    --muted: #5a6478;
+    --live: #00ff88;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--bg);color:var(--text);
+    font-family:'IBM Plex Sans',sans-serif;min-height:100vh;
+    display:flex;flex-direction:column;
+  }
+  body::before {
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+    pointer-events:none;z-index:1000;
+  }
+  body::after {
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+    background-size:40px 40px;pointer-events:none;
+  }
+
+  header {
+    padding:18px 32px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--border);position:relative;z-index:10;
+    flex-shrink:0;
+  }
+  .logo { display:flex;align-items:center;gap:10px; }
+  .logo-icon {
+    width:32px;height:32px;border:1.5px solid var(--accent2);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--accent2);
+  }
+  .logo h1 { font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase; }
+  .logo span { color:var(--muted);font-weight:300; }
+  .role-badge {
+    padding:5px 14px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:0.1em;text-transform:uppercase;border:1px solid rgba(123,97,255,0.3);
+    color:var(--accent2);background:rgba(123,97,255,0.07);
+  }
+
+  .main { position:relative;z-index:10;padding:28px 32px;display:flex;flex-direction:column;gap:20px;flex:1; }
+
+  /* Connect panel */
+  .connect-panel {
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:22px 28px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;
+  }
+  .field { display:flex;flex-direction:column;gap:8px; }
+  .field label { font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted); }
+  .code-input {
+    background:var(--surface2);border:1.5px solid var(--border);color:var(--text);
+    padding:10px 16px;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:20px;
+    letter-spacing:0.2em;width:180px;outline:none;text-transform:uppercase;transition:border-color 0.2s;
+  }
+  .code-input:focus { border-color:var(--accent); }
+  .code-input.connected { border-color:var(--live);color:var(--live); }
+
+  select.lang-select {
+    background:var(--surface2);border:1.5px solid var(--border);color:var(--text);
+    padding:10px 16px;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:15px;cursor:pointer;outline:none;
+    min-width:180px;transition:border-color 0.2s;
+  }
+  select.lang-select:focus { border-color:var(--accent2); }
+
+  .connect-btn {
+    padding:11px 28px;border-radius:8px;border:1.5px solid var(--accent2);
+    background:rgba(123,97,255,0.07);color:var(--accent2);
+    font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;
+  }
+  .connect-btn:hover { background:rgba(123,97,255,0.14);box-shadow:0 0 18px rgba(123,97,255,0.15); }
+  .connect-btn.on { background:rgba(255,60,60,0.08);border-color:#ff6666;color:#ff6666; }
+
+  .conn-status { display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted); }
+  .dot { width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all 0.3s;flex-shrink:0; }
+  .dot.live { background:var(--live);box-shadow:0 0 8px var(--live);animation:pulse 1.5s ease-in-out infinite; }
+  .dot.err { background:#ff5555; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* Main translation display */
+  .translation-display {
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;flex:1;display:flex;flex-direction:column;
+  }
+  .display-header {
+    padding:14px 24px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .display-lang { display:flex;align-items:center;gap:10px; }
+  .flag-big { font-size:24px;line-height:1; }
+  .lang-label { font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500; }
+
+  .display-controls { display:flex;align-items:center;gap:10px; }
+  .auto-toggle {
+    display:flex;align-items:center;gap:8px;padding:7px 16px;border-radius:20px;
+    border:1px solid var(--border);background:transparent;color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;cursor:pointer;transition:all 0.2s;
+  }
+  .auto-toggle.on { background:rgba(123,97,255,0.1);border-color:rgba(123,97,255,0.4);color:var(--accent2); }
+  .speak-now-btn {
+    padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;cursor:pointer;transition:all 0.2s;
+  }
+  .speak-now-btn:hover:not(:disabled) { border-color:rgba(0,212,255,0.3);color:var(--accent); }
+  .speak-now-btn.speaking { border-color:rgba(0,255,136,0.35);color:var(--live);background:rgba(0,255,136,0.07); }
+  .speak-now-btn:disabled { opacity:0.35;cursor:not-allowed; }
+
+  .translation-text {
+    flex:1;padding:32px 36px;font-size:clamp(18px, 2.5vw, 28px);line-height:1.7;
+    overflow-y:auto;
+  }
+  .translation-text .empty-hint {
+    color:var(--muted);font-size:16px;text-align:center;margin-top:40px;display:flex;
+    flex-direction:column;align-items:center;gap:12px;
+  }
+  .translation-text .empty-hint .big { font-size:44px;opacity:0.2; }
+  .interim-translated { color:var(--muted);font-style:italic; }
+
+  /* Source text small */
+  .source-text-bar {
+    padding:10px 24px;border-top:1px solid var(--border);
+    font-size:13px;color:var(--muted);line-height:1.5;
+    font-style:italic;min-height:40px;
+  }
+
+  /* Typing indicator */
+  .typing { display:inline-flex;gap:4px;align-items:center; }
+  .typing span { width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:bounce 0.9s ease-in-out infinite; }
+  .typing span:nth-child(2){animation-delay:0.15s}
+  .typing span:nth-child(3){animation-delay:0.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
+
+  /* Speaking wave */
+  .swave { display:inline-flex;gap:2px;align-items:center;height:14px; }
+  .swave span { width:2px;border-radius:1px;background:currentColor;animation:wave 0.6s ease-in-out infinite;transform-origin:bottom; }
+  .swave span:nth-child(1){height:5px;animation-delay:0s}
+  .swave span:nth-child(2){height:10px;animation-delay:0.1s}
+  .swave span:nth-child(3){height:14px;animation-delay:0.2s}
+  .swave span:nth-child(4){height:8px;animation-delay:0.1s}
+  @keyframes wave{0%,100%{transform:scaleY(0.4);opacity:0.5}50%{transform:scaleY(1);opacity:1}}
+
+  .error-msg {
+    background:rgba(255,60,60,0.08);border:1px solid rgba(255,60,60,0.2);border-radius:8px;
+    padding:12px 18px;font-size:13px;color:#ff7777;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <h1>POLYGLOT <span>// LIVE</span></h1>
+  </div>
+  <div class="role-badge">👂 Audience</div>
+</header>
+
+<div class="main">
+
+  <!-- Connect panel -->
+  <div class="connect-panel">
+    <div class="field">
+      <label>Room Code</label>
+      <input class="code-input" id="codeInput" maxlength="8" placeholder="XXXXXXXX" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="field">
+      <label>Your Language</label>
+      <select class="lang-select" id="langSelect" onchange="onLangChange()">
+        <option value="es" data-flag="🇪🇸" data-bcp="es-ES">🇪🇸 Spanish</option>
+        <option value="fr" data-flag="🇫🇷" data-bcp="fr-FR">🇫🇷 French</option>
+        <option value="de" data-flag="🇩🇪" data-bcp="de-DE">🇩🇪 German</option>
+        <option value="zh-CN" data-flag="🇨🇳" data-bcp="zh-CN">🇨🇳 Mandarin</option>
+        <option value="ja" data-flag="🇯🇵" data-bcp="ja-JP">🇯🇵 Japanese</option>
+        <option value="ar" data-flag="🇸🇦" data-bcp="ar-SA">🇸🇦 Arabic</option>
+        <option value="pt" data-flag="🇧🇷" data-bcp="pt-BR">🇧🇷 Portuguese</option>
+        <option value="ru" data-flag="🇷🇺" data-bcp="ru-RU">🇷🇺 Russian</option>
+        <option value="ko" data-flag="🇰🇷" data-bcp="ko-KR">🇰🇷 Korean</option>
+        <option value="hi" data-flag="🇮🇳" data-bcp="hi-IN">🇮🇳 Hindi</option>
+        <option value="vi" data-flag="🇻🇳" data-bcp="vi-VN">🇻🇳 Vietnamese</option>
+      </select>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">CONNECT</button>
+    <div class="conn-status">
+      <div class="dot" id="connDot"></div>
+      <span id="connText">Not connected</span>
+    </div>
+  </div>
+
+  <!-- Translation display -->
+  <div class="translation-display">
+    <div class="display-header">
+      <div class="display-lang">
+        <span class="flag-big" id="dispFlag">🌐</span>
+        <span class="lang-label" id="dispLang">Select a language</span>
+      </div>
+      <div class="display-controls">
+        <button class="auto-toggle" id="autoToggle" onclick="toggleAuto()">⚡ AUTO SPEAK: OFF</button>
+        <button class="speak-now-btn" id="speakNowBtn" onclick="speakNow()" disabled>▶ SPEAK</button>
+      </div>
+    </div>
+    <div class="translation-text" id="translationText">
+      <div class="empty-hint">
+        <div class="big">⬡</div>
+        <span>Enter the room code and connect to start receiving translations.</span>
+      </div>
+    </div>
+    <div class="source-text-bar" id="sourceBar">Waiting for speaker...</div>
+  </div>
+
+</div>
+
+<script>
+// ── Language config ────────────────────────────────────
+const LANG_BCP = {
+  'es':'es-ES','fr':'fr-FR','de':'de-DE','zh-CN':'zh-CN',
+  'ja':'ja-JP','ar':'ar-SA','pt':'pt-BR','ru':'ru-RU',
+  'ko':'ko-KR','hi':'hi-IN','vi':'vi-VN'
+};
+
+// ── State ──────────────────────────────────────────────
+let eventSource = null;
+let isConnected = false;
+let autoSpeak = false;
+let isSpeaking = false;
+let currentTranslation = '';
+
+// Pre-fill room code from URL ?room=
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('room')) {
+  document.getElementById('codeInput').value = urlParams.get('room').toUpperCase();
+}
+
+// Init lang display
+onLangChange();
+
+function onLangChange() {
+  const sel = document.getElementById('langSelect');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('dispFlag').textContent = opt.dataset.flag || '🌐';
+  document.getElementById('dispLang').textContent = opt.text.replace(/^.{2}\s/, '');
+}
+
+// ── Connect / Disconnect ──────────────────────────────
+function toggleConnect() {
+  isConnected ? disconnect() : connect();
+}
+
+function connect() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code.length < 4) { alert('Please enter a valid room code.'); return; }
+
+  const topic = 'polyglot-' + code.toLowerCase();
+  const url = `https://ntfy.sh/${topic}/sse`;
+
+  document.getElementById('connText').textContent = 'Connecting...';
+  document.getElementById('connDot').className = 'dot';
+
+  eventSource = new EventSource(url);
+
+  eventSource.onopen = () => {
+    isConnected = true;
+    document.getElementById('connectBtn').textContent = 'DISCONNECT';
+    document.getElementById('connectBtn').className = 'connect-btn on';
+    document.getElementById('connDot').className = 'dot live';
+    document.getElementById('connText').textContent = 'Connected to ' + code;
+    document.getElementById('codeInput').classList.add('connected');
+    document.getElementById('translationText').innerHTML =
+      '<div class="empty-hint"><div class="big">👂</div><span>Connected! Waiting for the speaker to begin...</span></div>';
+    document.getElementById('sourceBar').textContent = 'Waiting for speaker...';
+  };
+
+  eventSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.text) handleNewText(data.text, data.sourceLang || 'en');
+    } catch(err) {
+      // Some SSE pings aren't JSON — ignore
+    }
+  };
+
+  // ntfy.sh sends events with type "message"
+  eventSource.addEventListener('message', (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.message) {
+        const payload = JSON.parse(msg.message);
+        if (payload.text) handleNewText(payload.text, payload.sourceLang || 'en');
+      }
+    } catch(err) {}
+  });
+
+  eventSource.onerror = () => {
+    if (isConnected) {
+      document.getElementById('connDot').className = 'dot err';
+      document.getElementById('connText').textContent = 'Connection lost — retrying...';
+    }
+  };
+}
+
+function disconnect() {
+  if (eventSource) { eventSource.close(); eventSource = null; }
+  isConnected = false;
+  window.speechSynthesis.cancel();
+  document.getElementById('connectBtn').textContent = 'CONNECT';
+  document.getElementById('connectBtn').className = 'connect-btn';
+  document.getElementById('connDot').className = 'dot';
+  document.getElementById('connText').textContent = 'Not connected';
+  document.getElementById('codeInput').classList.remove('connected');
+}
+
+// ── Translation via MyMemory ──────────────────────────
+let translateDebounce = null;
+let lastSourceText = '';
+
+function handleNewText(sourceText, sourceLang) {
+  if (sourceText === lastSourceText) return;
+  lastSourceText = sourceText;
+
+  document.getElementById('sourceBar').textContent = '🎙 ' + sourceText;
+
+  const targetLang = document.getElementById('langSelect').value;
+
+  // Same language — no translation needed
+  if (targetLang.startsWith(sourceLang) || sourceLang.startsWith(targetLang)) {
+    setTranslation(sourceText);
+    return;
+  }
+
+  showTyping();
+  clearTimeout(translateDebounce);
+  translateDebounce = setTimeout(() => translateText(sourceText, sourceLang, targetLang), 200);
+}
+
+async function translateText(text, from, to) {
+  const langpair = `${from}|${to}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(langpair)}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.responseStatus === 200) {
+      const translated = data.responseData.translatedText;
+      setTranslation(translated);
+    } else {
+      // Retry with longer text might fail — show fallback
+      setTranslation(null, 'Translation unavailable for this text.');
+    }
+  } catch(e) {
+    setTranslation(null, 'Translation error — check connection.');
+  }
+}
+
+function setTranslation(text, errorMsg) {
+  currentTranslation = text || '';
+  const box = document.getElementById('translationText');
+  const speakBtn = document.getElementById('speakNowBtn');
+
+  if (errorMsg) {
+    box.innerHTML = `<span style="color:var(--muted);font-style:italic">${errorMsg}</span>`;
+    speakBtn.disabled = true;
+    return;
+  }
+
+  box.innerHTML = esc(text);
+  speakBtn.disabled = false;
+
+  if (autoSpeak) speakText(text);
+}
+
+function showTyping() {
+  document.getElementById('translationText').innerHTML =
+    '<div class="typing"><span></span><span></span><span></span></div>';
+  document.getElementById('speakNowBtn').disabled = true;
+}
+
+function esc(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── TTS ───────────────────────────────────────────────
+function toggleAuto() {
+  autoSpeak = !autoSpeak;
+  const btn = document.getElementById('autoToggle');
+  btn.textContent = autoSpeak ? '⚡ AUTO SPEAK: ON' : '⚡ AUTO SPEAK: OFF';
+  btn.className = 'auto-toggle' + (autoSpeak ? ' on' : '');
+}
+
+function speakNow() {
+  if (currentTranslation) speakText(currentTranslation);
+}
+
+function speakText(text) {
+  window.speechSynthesis.cancel();
+
+  const targetLang = document.getElementById('langSelect').value;
+  const bcp = LANG_BCP[targetLang] || targetLang;
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = bcp;
+  utter.rate = 0.95;
+
+  // Pick best matching voice
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === bcp)
+    || voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
+  if (match) utter.voice = match;
+
+  setSpeakingState(true);
+  utter.onend = () => setSpeakingState(false);
+  utter.onerror = () => setSpeakingState(false);
+  window.speechSynthesis.speak(utter);
+}
+
+function setSpeakingState(on) {
+  isSpeaking = on;
+  const btn = document.getElementById('speakNowBtn');
+  btn.className = 'speak-now-btn' + (on ? ' speaking' : '');
+  btn.innerHTML = on
+    ? '<span class="swave"><span></span><span></span><span></span><span></span></span> PLAYING'
+    : '▶ SPEAK';
+}
+
+// Warm up voices (browsers load lazily)
+window.speechSynthesis.getVoices();
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
